@@ -2,7 +2,7 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib import messages
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from annoying.decorators import render_to
 from blockexplorer.decorators import assert_valid_coin_symbol

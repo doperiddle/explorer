@@ -1,5 +1,5 @@
 from django import forms
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from blockcypher.constants import COIN_CHOICES, UNIT_CHOICES_DJANGO
 from blockcypher.utils import is_valid_address, is_valid_eth_address, is_valid_hash, is_valid_block_num
