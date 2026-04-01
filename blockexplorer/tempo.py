@@ -286,7 +286,7 @@ def get_transaction_details(tx_hash):
     outputs = [{'addresses': [to_addr], 'value': value_wei}] if to_addr else []
 
     return {
-        'hash': (tx.get('hash') or '').lstrip('0x'),
+        'hash': (tx.get('hash', '') or '').lstrip('0x'),
         'block_height': block_height,
         'block_hash': (block_hash or '').lstrip('0x'),
         'confirmed': confirmed,
@@ -322,7 +322,7 @@ def get_block_details(block_representation):
 
     txs = raw.get('transactions', [])
     tx_hashes = [
-        (tx.get('hash') or '').lstrip('0x')
+        (tx.get('hash', '') or '').lstrip('0x')
         for tx in txs
         if isinstance(tx, dict)
     ]
@@ -334,7 +334,7 @@ def get_block_details(block_representation):
     size = _hex_to_int(raw.get('size'))
 
     return {
-        'hash': (raw.get('hash') or '').lstrip('0x'),
+        'hash': (raw.get('hash', '') or '').lstrip('0x'),
         'height': height,
         'time': datetime.fromtimestamp(timestamp, tz=timezone.utc),
         'n_tx': len(txs),
@@ -342,5 +342,5 @@ def get_block_details(block_representation):
         'fees': gas_used,
         'size': size,
         'txids': tx_hashes,
-        'prev_block': (raw.get('parentHash') or '').lstrip('0x'),
+        'prev_block': (raw.get('parentHash', '') or '').lstrip('0x'),
     }

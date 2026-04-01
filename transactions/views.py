@@ -105,11 +105,7 @@ def transaction_overview(request, coin_symbol, tx_hash):
     else:
         time_to_use = received_at
 
-    if coin_symbol == tempo_client.TEMPO_COIN_SYMBOL or coin_symbol == 'eth':
-        is_coinbase_tx = False
-        total_satoshis_coinbase, fee_in_satoshis_coinbase = None, None
-        coinbase_msg = None
-    elif 'prev_hash' in inputs[0]:
+    if coin_symbol in (tempo_client.TEMPO_COIN_SYMBOL, 'eth') or 'prev_hash' in inputs[0]:
         is_coinbase_tx = False
         total_satoshis_coinbase, fee_in_satoshis_coinbase = None, None
         coinbase_msg = None
