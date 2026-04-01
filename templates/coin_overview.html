@@ -95,6 +95,19 @@
             </td>
           </tr>
         </table>
+      {% elif coin_symbol == 'tempo' %}
+        <table class="table">
+          <tr>
+            <th>Recommended Gas Price</th>
+          </tr>
+          <tr>
+            <td>
+              <span>
+                {% satoshis_to_user_units_trimmed fees.high_fee_per_kb 'gwei' 'eth' 'True' 3 %}
+              </span>
+            </td>
+          </tr>
+        </table>
       {% else %}
         <table class="table">
           <tr>
@@ -248,6 +261,7 @@
 
       $('[data-toggle="tooltip"]').tooltip();
 
+      {% if coin_symbol != 'tempo' %}
       var total_ws_received = 0;
       var MAX_WS_TO_RECEIVE = 100;
 
@@ -322,6 +336,8 @@
         }
 
       };
+
+      {% endif %}{# /if coin_symbol != 'tempo' #}
 
       var sites = {
         piiko: "https://www.piiko.co",

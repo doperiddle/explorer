@@ -14,6 +14,8 @@ from blockexplorer.settings import BLOCKCYPHER_PUBLIC_KEY, BLOCKCYPHER_API_KEY
 from blockcypher.api import get_transaction_details, pushtx, decodetx, get_broadcast_transactions, embed_data
 from blockcypher.constants import COIN_SYMBOL_MAPPINGS
 
+from blockexplorer import tempo as tempo_client
+
 from binascii import unhexlify
 
 import json
@@ -37,29 +39,44 @@ def scale_confidence(confidence):
 @render_to('transaction_overview.html')
 def transaction_overview(request, coin_symbol, tx_hash):
 
-    try:
-        TX_LIMIT = 50
-        transaction_details = get_transaction_details(
-                tx_hash=tx_hash,
-                coin_symbol=coin_symbol,
-                limit=TX_LIMIT,
-                api_key=BLOCKCYPHER_API_KEY,
-                include_hex=False,
-                show_confidence=True,
+    if coin_symbol == tempo_client.TEMPO_COIN_SYMBOL:
+        transaction_details = tempo_client.get_transaction_details(tx_hash)
+        if 'error' in transaction_details:
+            msg = _('No transaction found with the hash %(tx_hash)s' % {'tx_hash': tx_hash})
+            messages.warning(request, msg)
+            return HttpResponseRedirect(reverse('home'))
+        api_url = '%s (eth_getTransactionByHash)' % tempo_client.TEMPO_RPC_URL
+    else:
+        try:
+            TX_LIMIT = 50
+            transaction_details = get_transaction_details(
+                    tx_hash=tx_hash,
+                    coin_symbol=coin_symbol,
+                    limit=TX_LIMIT,
+                    api_key=BLOCKCYPHER_API_KEY,
+                    include_hex=False,
+                    show_confidence=True,
+                    )
+        except AssertionError:
+            msg = _('Invalid Transaction Hash')
+            messages.warning(request, msg)
+            redir_url = reverse('coin_overview', kwargs={'coin_symbol': coin_symbol})
+            return HttpResponseRedirect(redir_url)
+
+        # import pprint; pprint.pprint(transaction_details, width=1)
+
+        if 'error' in transaction_details:
+            # Corner case, such as a validly formed tx hash with no matching transaction
+            msg = _('No transaction found with the hash %(tx_hash)s' % {'tx_hash': tx_hash})
+            messages.warning(request, msg)
+            return HttpResponseRedirect(reverse('home'))
+
+        api_url = 'https://api.blockcypher.com/v1/%s/%s/txs/%s?limit=%s&includeHex=true' % (
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_code'],
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_network'],
+                tx_hash,
+                TX_LIMIT,
                 )
-    except AssertionError:
-        msg = _('Invalid Transaction Hash')
-        messages.warning(request, msg)
-        redir_url = reverse('coin_overview', kwargs={'coin_symbol': coin_symbol})
-        return HttpResponseRedirect(redir_url)
-
-    # import pprint; pprint.pprint(transaction_details, width=1)
-
-    if 'error' in transaction_details:
-        # Corner case, such as a validly formed tx hash with no matching transaction
-        msg = _('No transaction found with the hash %(tx_hash)s' % {'tx_hash': tx_hash})
-        messages.warning(request, msg)
-        return HttpResponseRedirect(reverse('home'))
 
     confidence = transaction_details.get('confidence')
     if confidence:
@@ -88,7 +105,7 @@ def transaction_overview(request, coin_symbol, tx_hash):
     else:
         time_to_use = received_at
 
-    if 'prev_hash' in inputs[0] or coin_symbol == 'eth':
+    if coin_symbol in (tempo_client.TEMPO_COIN_SYMBOL, 'eth') or 'prev_hash' in inputs[0]:
         is_coinbase_tx = False
         total_satoshis_coinbase, fee_in_satoshis_coinbase = None, None
         coinbase_msg = None

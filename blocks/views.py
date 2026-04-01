@@ -12,6 +12,8 @@ from blockcypher.api import get_block_details, get_latest_block_height, get_bloc
 from blockcypher.constants import COIN_SYMBOL_MAPPINGS
 from blockcypher.utils import is_valid_hash
 
+from blockexplorer import tempo as tempo_client
+
 from utils import get_max_pages
 
 
@@ -28,57 +30,65 @@ def block_overview(request, coin_symbol, block_representation):
     else:
         current_page = 1
 
-    # TODO: fail gracefully if the user picks a number of pages that is too large
-    # Waiting on @matthieu's change to API first (currently throws 502)
+    if coin_symbol == tempo_client.TEMPO_COIN_SYMBOL:
+        block_details = tempo_client.get_block_details(block_representation)
+        if 'error' in block_details:
+            msg = _('Sorry, that block was not found')
+            messages.warning(request, msg)
+            return HttpResponseRedirect(reverse('home'))
+        api_url = '%s (eth_getBlockByHash / eth_getBlockByNumber)' % tempo_client.TEMPO_RPC_URL
+    else:
+        # TODO: fail gracefully if the user picks a number of pages that is too large
+        # Waiting on @matthieu's change to API first (currently throws 502)
 
-    try:
-        if not is_valid_hash(block_representation):
-            # it's a block num, we want this as a hash
-            if block_representation == "0":
-                msg = _('Sorry, that block was not found')
-                messages.warning(request, msg)
-                return HttpResponseRedirect(reverse('home'))
+        try:
+            if not is_valid_hash(block_representation):
+                # it's a block num, we want this as a hash
+                if block_representation == "0":
+                    msg = _('Sorry, that block was not found')
+                    messages.warning(request, msg)
+                    return HttpResponseRedirect(reverse('home'))
 
-            block_hash = get_block_hash(
-                    block_height=block_representation,
+                block_hash = get_block_hash(
+                        block_height=block_representation,
+                        coin_symbol=coin_symbol,
+                        api_key=BLOCKCYPHER_API_KEY,
+                        )
+                kwargs = {
+                        'coin_symbol': coin_symbol,
+                        'block_representation': block_hash,
+                        }
+                redir_url = reverse('block_overview', kwargs=kwargs)
+                return HttpResponseRedirect(redir_url)
+
+            block_details = get_block_details(
+                    block_representation=block_representation,
                     coin_symbol=coin_symbol,
+                    txn_limit=TXNS_PER_PAGE,
+                    in_out_limit=25,
+                    txn_offset=(current_page-1)*TXNS_PER_PAGE,
                     api_key=BLOCKCYPHER_API_KEY,
                     )
-            kwargs = {
-                    'coin_symbol': coin_symbol,
-                    'block_representation': block_hash,
-                    }
-            redir_url = reverse('block_overview', kwargs=kwargs)
+        except AssertionError:
+            msg = _('Invalid Block Representation')
+            messages.warning(request, msg)
+            redir_url = reverse('coin_overview', kwargs={'coin_symbol': coin_symbol})
             return HttpResponseRedirect(redir_url)
 
-        block_details = get_block_details(
-                block_representation=block_representation,
-                coin_symbol=coin_symbol,
-                txn_limit=TXNS_PER_PAGE,
-                in_out_limit=25,
-                txn_offset=(current_page-1)*TXNS_PER_PAGE,
-                api_key=BLOCKCYPHER_API_KEY,
+        # import pprint; pprint.pprint(block_details, width=1)
+
+        if 'error' in block_details:
+            msg = _('Sorry, that block was not found')
+            messages.warning(request, msg)
+            messages.warning(request, block_details['error'])
+            return HttpResponseRedirect(reverse('home'))
+
+        # Technically this is not the only API call used on this page
+        api_url = 'https://api.blockcypher.com/v1/%s/%s/blocks/%s' % (
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_code'],
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_network'],
+                block_representation,
                 )
-    except AssertionError:
-        msg = _('Invalid Block Representation')
-        messages.warning(request, msg)
-        redir_url = reverse('coin_overview', kwargs={'coin_symbol': coin_symbol})
-        return HttpResponseRedirect(redir_url)
-
-    # import pprint; pprint.pprint(block_details, width=1)
-
-    if 'error' in block_details:
-        msg = _('Sorry, that block was not found')
-        messages.warning(request, msg)
-        messages.warning(request, block_details['error'])
-        return HttpResponseRedirect(reverse('home'))
-
-    # Technically this is not the only API call used on this page
-    api_url = 'https://api.blockcypher.com/v1/%s/%s/blocks/%s' % (
-            COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_code'],
-            COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_network'],
-            block_representation,
-            )
 
     return {
             'coin_symbol': coin_symbol,
@@ -138,8 +148,11 @@ def block_ordered_tx(request, coin_symbol, block_num, tx_num):
 
 @assert_valid_coin_symbol
 def latest_block(request, coin_symbol):
-    latest_block_height = get_latest_block_height(coin_symbol=coin_symbol,
-            api_key=BLOCKCYPHER_API_KEY)
+    if coin_symbol == tempo_client.TEMPO_COIN_SYMBOL:
+        latest_block_height = tempo_client.get_latest_block_number()
+    else:
+        latest_block_height = get_latest_block_height(coin_symbol=coin_symbol,
+                api_key=BLOCKCYPHER_API_KEY)
     kwargs = {
             'coin_symbol': coin_symbol,
             'block_representation': latest_block_height,
