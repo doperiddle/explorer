@@ -13,6 +13,8 @@ from blockexplorer.settings import BLOCKCYPHER_PUBLIC_KEY, BLOCKCYPHER_API_KEY, 
 from blockcypher.api import get_address_full, get_address_overview
 from blockcypher.constants import COIN_SYMBOL_MAPPINGS
 
+from blockexplorer import tempo as tempo_client
+
 from addresses.forms import AddressSearchForm
 
 SMALL_PAYMENTS_MSG = '''
@@ -51,44 +53,52 @@ def address_overview(request, coin_symbol, address, wallet_name=None):
 
     before_bh = request.GET.get('before')
 
-    try:
-        user_agent = request.META.get('HTTP_USER_AGENT')
+    if coin_symbol == tempo_client.TEMPO_COIN_SYMBOL:
+        address_details = tempo_client.get_address_details(address)
+        if 'error' in address_details:
+            msg = _('Sorry, that address was not found')
+            messages.warning(request, msg)
+            return HttpResponseRedirect(reverse('home'))
+        api_url = '%s (eth_getBalance + eth_getTransactionCount)' % tempo_client.TEMPO_RPC_URL
+    else:
+        try:
+            user_agent = request.META.get('HTTP_USER_AGENT')
 
-        if is_bot(user_agent):
-            # very crude hack!
-            confirmations = 1
-        else:
-            confirmations = 0
+            if is_bot(user_agent):
+                # very crude hack!
+                confirmations = 1
+            else:
+                confirmations = 0
 
-        address_details = get_address_full(
-                address=address,
-                coin_symbol=coin_symbol,
-                txn_limit=TXNS_PER_PAGE,
-                inout_limit=5,
-                confirmations=confirmations,
-                api_key=BLOCKCYPHER_API_KEY,
-                before_bh=before_bh,
-                )
-    except AssertionError:
-        msg = _('Invalid Address')
-        messages.warning(request, msg)
-        redir_url = reverse('coin_overview', kwargs={'coin_symbol': coin_symbol})
-        return HttpResponseRedirect(redir_url)
+            address_details = get_address_full(
+                    address=address,
+                    coin_symbol=coin_symbol,
+                    txn_limit=TXNS_PER_PAGE,
+                    inout_limit=5,
+                    confirmations=confirmations,
+                    api_key=BLOCKCYPHER_API_KEY,
+                    before_bh=before_bh,
+                    )
+        except AssertionError:
+            msg = _('Invalid Address')
+            messages.warning(request, msg)
+            redir_url = reverse('coin_overview', kwargs={'coin_symbol': coin_symbol})
+            return HttpResponseRedirect(redir_url)
 
-    # import pprint; pprint.pprint(address_details, width=1)
+        # import pprint; pprint.pprint(address_details, width=1)
 
-    if 'error' in address_details:
-        msg = _('Sorry, that address was not found')
-        messages.warning(request, msg)
-        return HttpResponseRedirect(reverse('home'))
+        if 'error' in address_details:
+            msg = _('Sorry, that address was not found')
+            messages.warning(request, msg)
+            return HttpResponseRedirect(reverse('home'))
+
+        api_url = 'https://api.blockcypher.com/v1/%s/%s/addrs/%s/full?limit=50' % (
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_code'],
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_network'],
+                address)
 
     all_transactions = address_details.get('txs', [])
     # import pprint; pprint.pprint(all_transactions, width=1)
-
-    api_url = 'https://api.blockcypher.com/v1/%s/%s/addrs/%s/full?limit=50' % (
-            COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_code'],
-            COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_network'],
-            address)
 
     return {
             'coin_symbol': coin_symbol,

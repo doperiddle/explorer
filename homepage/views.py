@@ -15,6 +15,8 @@ from blockcypher.api import get_transaction_details, get_block_overview, get_blo
 from blockcypher.utils import is_valid_hash, is_valid_ethash_block_hash, is_valid_block_num, is_valid_sha_block_hash, is_valid_address, is_valid_eth_address
 from blockcypher.constants import ETHASH_COINS, SHA_COINS, SCRYPT_COINS, COIN_SYMBOL_MAPPINGS
 
+from blockexplorer import tempo as tempo_client
+
 from operator import itemgetter
 
 
@@ -137,9 +139,10 @@ def home(request):
                         kwargs['coin_symbol'] = 'bcy'
                 redirect_url = reverse('address_overview', kwargs=kwargs)
             elif is_valid_eth_address(search_string):
-                    # It's an address
+                    # It's an address; keep current coin_symbol if already set to 'tempo'
                     kwargs['address'] = search_string
-                    kwargs['coin_symbol'] = 'eth'
+                    if coin_symbol != tempo_client.TEMPO_COIN_SYMBOL:
+                        kwargs['coin_symbol'] = 'eth'
                     redirect_url = reverse('address_overview', kwargs=kwargs)
 
             elif is_valid_wallet_name(search_string):
@@ -180,41 +183,47 @@ def coin_overview(request, coin_symbol):
             }
     form = SearchForm(initial=initial)
 
-    latest_bh = get_latest_block_height(coin_symbol=coin_symbol, api_key=BLOCKCYPHER_API_KEY)
+    if coin_symbol == tempo_client.TEMPO_COIN_SYMBOL:
+        recent_blocks = tempo_client.get_recent_blocks(count=5)
+        fees = tempo_client.get_fee_estimates()
+        recent_txs_filtered = []
+        fee_api_url = tempo_client.TEMPO_RPC_URL
+    else:
+        latest_bh = get_latest_block_height(coin_symbol=coin_symbol, api_key=BLOCKCYPHER_API_KEY)
 
-    recent_blocks = get_blocks_overview(
-            block_representation_list=list(reversed(range(latest_bh-4, latest_bh+1))),
-            coin_symbol=coin_symbol,
-            api_key=BLOCKCYPHER_API_KEY)
+        recent_blocks = get_blocks_overview(
+                block_representation_list=list(reversed(range(latest_bh-4, latest_bh+1))),
+                coin_symbol=coin_symbol,
+                api_key=BLOCKCYPHER_API_KEY)
 
-    recent_blocks = sorted(recent_blocks, key=lambda k: k['height'], reverse=True)
-    fees = get_blockchain_fee_estimates(coin_symbol=coin_symbol, api_key=BLOCKCYPHER_API_KEY)
+        recent_blocks = sorted(recent_blocks, key=lambda k: k['height'], reverse=True)
+        fees = get_blockchain_fee_estimates(coin_symbol=coin_symbol, api_key=BLOCKCYPHER_API_KEY)
 
-    fees['high_fee_per_kb__smalltx'] = fees['high_fee_per_kb']/4
-    fees['medium_fee_per_kb__smalltx'] = fees['medium_fee_per_kb']/4
-    fees['low_fee_per_kb__smalltx'] = fees['low_fee_per_kb']/4
-    # import pprint; pprint.pprint(recent_blocks, width=1)
+        fees['high_fee_per_kb__smalltx'] = fees['high_fee_per_kb']/4
+        fees['medium_fee_per_kb__smalltx'] = fees['medium_fee_per_kb']/4
+        fees['low_fee_per_kb__smalltx'] = fees['low_fee_per_kb']/4
+        # import pprint; pprint.pprint(recent_blocks, width=1)
 
-    recent_txs = get_broadcast_transactions(coin_symbol=coin_symbol,
-            api_key=BLOCKCYPHER_API_KEY,
-            limit=10)
+        recent_txs = get_broadcast_transactions(coin_symbol=coin_symbol,
+                api_key=BLOCKCYPHER_API_KEY,
+                limit=10)
 
-    recent_txs_filtered = []
-    tx_hashes_seen = set([])
-    for recent_tx in recent_txs:
-        if recent_tx['hash'] in tx_hashes_seen:
-            continue
-        else:
-            tx_hashes_seen.add(recent_tx['hash'])
-            recent_txs_filtered.append(recent_tx)
+        recent_txs_filtered = []
+        tx_hashes_seen = set([])
+        for recent_tx in recent_txs:
+            if recent_tx['hash'] in tx_hashes_seen:
+                continue
+            else:
+                tx_hashes_seen.add(recent_tx['hash'])
+                recent_txs_filtered.append(recent_tx)
 
-    # sort recent txs by order (they're not always returning in order)
-    recent_txs_filtered = sorted(recent_txs_filtered, key=itemgetter('received'), reverse=True)
+        # sort recent txs by order (they're not always returning in order)
+        recent_txs_filtered = sorted(recent_txs_filtered, key=itemgetter('received'), reverse=True)
 
-    fee_api_url = 'https://api.blockcypher.com/v1/%s/%s' % (
-            COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_code'],
-            COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_network'],
-            )
+        fee_api_url = 'https://api.blockcypher.com/v1/%s/%s' % (
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_code'],
+                COIN_SYMBOL_MAPPINGS[coin_symbol]['blockcypher_network'],
+                )
 
     return {
             'coin_symbol': coin_symbol,
