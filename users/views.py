@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse_lazy
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import now
 from django.utils.html import escape
 from django.shortcuts import get_object_or_404
@@ -21,7 +21,7 @@ from datetime import timedelta
 from utils import get_client_ip, get_user_agent
 
 
-@render_to('admin/login.html')
+@render_to('login.html')
 def user_login(request):
     user = request.user
     if user.is_authenticated:

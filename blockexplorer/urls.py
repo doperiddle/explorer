@@ -1,4 +1,4 @@
-from django.conf.urls import url
+from django.urls import re_path as url
 
 from addresses import views as addresses_views
 from blocks import views as blocks_views
@@ -14,8 +14,8 @@ urlpatterns = [
     url(r'^fail500/$', homepage_views.fail500, name='fail500'),
 
     # Login
-    url(r'^signuup/?$', users_views.signup, name='signup'),
-    url(r'^logiin/?$', users_views.user_login, name='user_login'),
+    url(r'^signup/?$', users_views.signup, name='signup'),
+    url(r'^login/?$', users_views.user_login, name='user_login'),
     url(r'^logout/?$', users_views.logout_request, name='logout_request'),
     url(r'^confirm/(?P<verif_code>[-\w]+)/$', users_views.confirm_subscription, name='confirm_subscription'),
     url(r'^unconfirmed-email/?$', users_views.unconfirmed_email, name='unconfirmed_email'),
