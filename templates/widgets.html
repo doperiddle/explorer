@@ -38,6 +38,16 @@
       <textarea onclick="this.focus();this.select()" readonly="readonly" class="form-control "><iframe src="{{ BASE_URL }}{% url 'render_received_widget' coin_symbol b58_address %}" style="overflow:hidden;" frameborder="0"></iframe></textarea>
     </form>
 
+    <hr />
+
+    <h4>Donation Widget</h4>
+    <p>Shows a QR code, address, and total received. Drop this on your site so visitors can donate easily.</p>
+    <iframe src="{{ BASE_URL }}{% url 'render_donation_widget' coin_symbol b58_address %}" style="overflow:hidden;" frameborder="0" width="220" height="260"></iframe>
+    <p>Donation Widget Code<p>
+    <form class="form form-horizontal">
+      <textarea onclick="this.focus();this.select()" readonly="readonly" class="form-control "><iframe src="{{ BASE_URL }}{% url 'render_donation_widget' coin_symbol b58_address %}" style="overflow:hidden;" frameborder="0" width="220" height="260"></iframe></textarea>
+    </form>
+
   </div>
 </div>
 

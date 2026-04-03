@@ -1,0 +1,49 @@
+{% load btc_formats %}
+{% load humanize %}
+
+<html>
+  <head>
+    <title></title>
+    {# Bootstrap core CSS #}
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css" rel="stylesheet">
+
+    {# FontAwesome #}
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <style>
+      body { margin: 8px; background: #fff; }
+      .donation-widget { text-align: center; border: 1px solid #ddd; border-radius: 4px; padding: 12px 16px; display: inline-block; min-width: 160px; }
+      .donation-address { font-size: 10px; word-break: break-all; color: #777; margin: 6px 0 0; }
+    </style>
+  </head>
+  <body>
+
+    <div class="donation-widget">
+      <a target="_blank" href="{{ BASE_URL }}{% url 'address_overview' coin_symbol b58_address %}">
+        <img
+          src="//chart.googleapis.com/chart?cht=qr&amp;chl={{ b58_address }}&amp;choe=UTF-8&amp;chs=120x120"
+          alt="{{ b58_address }}" title="{{ b58_address }}" width="120" height="120">
+      </a>
+
+      <p class="donation-address">{{ b58_address }}</p>
+
+      <h4>
+        <i class="fa fa-heart"></i>
+        Donate {{ coin_symbol|coin_symbol_to_display_shortname }}
+      </h4>
+
+      <p>
+        <strong>{% satoshis_to_user_units_trimmed address_overview.total_received 'btc' coin_symbol True 0 %}</strong>
+        received
+        {% if address_overview.final_n_tx %}
+        from {{ address_overview.final_n_tx|intcomma }} transaction{{ address_overview.final_n_tx|pluralize }}
+        {% endif %}
+      </p>
+    </div>
+
+    <p align="center">
+      <a class="text-muted" href="http://www.blockcypher.com/">Powered by BlockCypher</a>
+    </p>
+
+  </body>
+</html>

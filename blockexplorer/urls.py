@@ -44,6 +44,7 @@ urlpatterns = [
     url(r'^show-widgets/(?P<coin_symbol>[-\w]+)/(?P<address>[-\w]+)/$', addresses_views.widgets_overview, name='widgets_overview'),
     url(r'^widget/(?P<coin_symbol>[-\w]+)/(?P<address>[-\w]+)/balance/$', addresses_views.render_balance_widget, name='render_balance_widget'),
     url(r'^widget/(?P<coin_symbol>[-\w]+)/(?P<address>[-\w]+)/received/$', addresses_views.render_received_widget, name='render_received_widget'),
+    url(r'^widget/(?P<coin_symbol>[-\w]+)/(?P<address>[-\w]+)/donate/$', addresses_views.render_donation_widget, name='render_donation_widget'),
 
     # Forwarding Pages (URL hacks)
     url(r'^widgets/$', addresses_views.widget_forwarding, name='widget_forwarding'),

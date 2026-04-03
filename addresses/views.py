@@ -135,6 +135,19 @@ def render_received_widget(request, coin_symbol, address):
             }
 
 
+@xframe_options_exempt
+@render_to('donation_widget.html')
+def render_donation_widget(request, coin_symbol, address):
+    address_overview = get_address_overview(address=address,
+            coin_symbol=coin_symbol, api_key=BLOCKCYPHER_API_KEY)
+    return {
+            'address_overview': address_overview,
+            'coin_symbol': coin_symbol,
+            'b58_address': address,
+            'BASE_URL': BASE_URL,
+            }
+
+
 @render_to('search_widgets.html')
 def search_widgets(request, coin_symbol):
     form = AddressSearchForm()
